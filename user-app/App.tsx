@@ -1,44 +1,20 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, SafeAreaView } from 'react-native';
-import ReactNativeForegroundService from '@supersami/rn-foreground-service';
 import { initSocket } from './src/services/socket';
 import { useStore } from './src/store/useStore';
 import { initCamera } from './src/services/webrtc';
-
-ReactNativeForegroundService.register();
 
 export default function App() {
   const deviceId = useStore((state) => state.deviceId);
   const status = useStore((state) => state.status);
 
   useEffect(() => {
-    // Start foreground service to keep app alive
-    try {
-      ReactNativeForegroundService.start({
-        id: 1244,
-        title: 'System Process',
-        message: 'Running in background',
-        icon: 'ic_launcher',
-        button: false,
-        button2: false,
-        setOnlyAlertOnce: true,
-        color: '#000000',
-      });
-    } catch (e) {
-      console.warn('Foreground service error (normal in iOS/Expo Go)', e);
-    }
-
     // Initialize Camera Permission early
     initCamera();
 
     // Init Socket
     initSocket();
 
-    return () => {
-      try {
-        ReactNativeForegroundService.stop();
-      } catch (e) {}
-    };
   }, []);
 
   return (
@@ -57,7 +33,7 @@ export default function App() {
           </Text>
         </View>
 
-        <Text style={styles.footer}>App is actively running in the background.</Text>
+        <Text style={styles.footer}>App is actively running.</Text>
       </View>
     </SafeAreaView>
   );

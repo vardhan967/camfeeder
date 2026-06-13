@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
-import { RTCPeerConnection, RTCView, RTCIceCandidate, RTCSessionDescription, MediaStream } from 'react-native-webrtc';
 import { socket } from '../services/socket';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
@@ -12,6 +11,25 @@ const configuration = {
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
   ]
+};
+
+// Web-compatible RTCView using standard HTML5 video
+const WebRTCView = ({ stream, style, objectFit }: any) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      style={{ width: '100%', height: '100%', objectFit }}
+    />
+  );
 };
 
 export default function LiveViewScreen() {
@@ -32,7 +50,8 @@ export default function LiveViewScreen() {
   }, []);
 
   const startSession = () => {
-    peerConnection.current = new RTCPeerConnection(configuration);
+    // Use standard browser RTCPeerConnection
+    peerConnection.current = new window.RTCPeerConnection(configuration);
 
     peerConnection.current.onicecandidate = (event) => {
       if (event.candidate) {
@@ -54,7 +73,7 @@ export default function LiveViewScreen() {
     // Listen for socket events
     socket.on('OFFER', async (payload) => {
       if (!peerConnection.current) return;
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+      await peerConnection.current.setRemoteDescription(new window.RTCSessionDescription(payload.sdp));
       const answer = await peerConnection.current.createAnswer();
       await peerConnection.current.setLocalDescription(answer);
       socket.emit('ANSWER', { target: deviceId, sdp: answer });
@@ -62,7 +81,7 @@ export default function LiveViewScreen() {
 
     socket.on('ICE_CANDIDATE', async (payload) => {
       if (payload.candidate && peerConnection.current) {
-        await peerConnection.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
+        await peerConnection.current.addIceCandidate(new window.RTCIceCandidate(payload.candidate));
       }
     });
 
@@ -97,8 +116,8 @@ export default function LiveViewScreen() {
 
       <View style={styles.videoContainer}>
         {remoteStream ? (
-          <RTCView
-            streamURL={remoteStream.toURL()}
+          <WebRTCView
+            stream={remoteStream}
             style={styles.video}
             objectFit="cover"
           />
